@@ -20,7 +20,7 @@ class TrainParser():
         # Frequently used commands
         parser.add_argument('--epochs', type=int, default=1, help='')
         parser.add_argument('--batch_size', type=int, default=16, help='')
-        parser.add_argument('--image_dir', type=str, default='dataset/paris/', help='')
+        parser.add_argument('--image_dir', type=str, default='dataset/cifar/', help='')
         parser.add_argument('--image_list_train', type=str, default='namelist/paris_training.txt', help='')
         parser.add_argument('--image_list_test', type=str, default='namelist/paris_training.txt', help='')
         parser.add_argument('--mask_dir', type=str, default='dataset/mask/testing_mask_dataset/', help='')
