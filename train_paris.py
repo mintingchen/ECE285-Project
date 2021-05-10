@@ -28,15 +28,15 @@ def train(dataset, epoch, iter_num):
         image = data['image']
         mask = data['mask']
         
-#         masked_img = masked_img[0].permute((1, 2, 0))
-#         masked_img = masked_img.cpu().numpy()
-#         image = image[0].permute((1, 2, 0))
-#         image = image.cpu().numpy()
-#         mask = mask[0].permute((1, 2, 0))
-#         mask = mask.cpu().numpy()
-#         cv2.imwrite("masked_img.png", masked_img)
-#         cv2.imwrite("image.png", image)
-#         cv2.imwrite("mask.png", mask)
+        masked_img = masked_img[0].permute((1, 2, 0))
+        masked_img = masked_img.cpu().numpy()
+        image = image[0].permute((1, 2, 0))
+        image = image.cpu().numpy()
+        mask = mask[0].permute((1, 2, 0))
+        mask = mask.cpu().numpy()
+        cv2.imwrite("masked_img.png", masked_img)
+        cv2.imwrite("image.png", image)
+        cv2.imwrite("mask.png", mask)
 
 
 if __name__ == '__main__':
@@ -48,11 +48,11 @@ if __name__ == '__main__':
     print_options(args)
 
     # dataset
-    dataset = CreateDataloader(args)
+    trainset, valset = CreateDataloader(args)
 
     iter_num = 0
     for epoch in range(args.epochs):
         print('\nEpoch %s' % (epoch+1))
 
-        train(dataset, epoch, iter_num)
+        train(trainset, epoch, iter_num)
 
