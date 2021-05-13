@@ -16,7 +16,7 @@ def set_seeds(seed=1234):
 
 class TrainParser():
     def __init__(self):
-        parser = argparse.ArgumentParser(description='AIRenderer Training')
+        parser = argparse.ArgumentParser(description='Inpainting Training')
         # Frequently used commands
         parser.add_argument('--epochs', type=int, default=1, help='')
         parser.add_argument('--batch_size', type=int, default=16, help='')
@@ -24,13 +24,15 @@ class TrainParser():
         parser.add_argument('--image_list_train', type=str, default='namelist/paris_training.txt', help='')
         parser.add_argument('--image_list_test', type=str, default='namelist/paris_training.txt', help='')
         parser.add_argument('--mask_dir', type=str, default='dataset/mask/testing_mask_dataset/', help='')
+        parser.add_argument('--mask_list_train', type=str, default='namelist/nv_mask_training.txt', help='')
+        parser.add_argument('--mask_list_test', type=str, default='namelist/nv_mask_training.txt', help='')
 
         self.parser = parser
 
 
 class TestParser():
     def __init__(self):
-        parser = argparse.ArgumentParser(description='AIRenderer Testing')
+        parser = argparse.ArgumentParser(description='Inpainting Testing')
         # Frequently used commands
         parser.add_argument('--model', type=str, help='Model type')
         parser.add_argument('--task', type=str, help='Task type: denoising_SR, denoising, SR')
