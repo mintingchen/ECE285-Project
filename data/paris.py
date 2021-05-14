@@ -39,7 +39,7 @@ class ParisTrain(Dataset):
         img = img[img_crop_y : img_crop_y + self.patch_height, img_crop_x : img_crop_x + self.patch_width, :]
         mask = mask[mask_crop_y : mask_crop_y + self.patch_height, mask_crop_x : mask_crop_x + self.patch_width]
         mask[mask>1] = 1
-        mask = np.expand_dims(mask[:, :], axis=2)
+        mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
         masked_img = img * mask
 
         img = torch.from_numpy(img).permute((2, 0, 1))
@@ -80,7 +80,7 @@ class ParisTest(Dataset):
         img = img[img_crop_y : img_crop_y + self.patch_height, img_crop_x : img_crop_x + self.patch_width, :]
         mask = mask[mask_crop_y : mask_crop_y + self.patch_height, mask_crop_x : mask_crop_x + self.patch_width]
         mask[mask>1] = 1
-        mask = np.expand_dims(mask[:, :], axis=2)
+        mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
         masked_img = img * mask
 
         img = torch.from_numpy(img).permute((2, 0, 1))
