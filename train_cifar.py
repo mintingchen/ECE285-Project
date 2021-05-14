@@ -49,3 +49,8 @@ if __name__ == '__main__':
 
     # dataset
     trainset, valset = CreateDataloader(args)
+    iter_num = 0
+    for epoch in range(args.epochs):
+        print('\nEpoch %s' % (epoch+1))
+
+        train(trainset, epoch, iter_num)
