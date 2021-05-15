@@ -1,7 +1,7 @@
 python train.py --dataset cifar \
             --epochs 1 \
             --batch_size 16 \
-            --image_dir dataset/cifar/ \
+            --image_dir dataset/cifar/test \
             --image_list_train namelist/paris_training.txt \
             --image_list_test namelist/paris_training.txt \
             --mask_dir dataset/mask/testing_mask_dataset/ \
