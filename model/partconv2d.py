@@ -4,23 +4,24 @@ from torch import nn, cuda
 from torch.autograd import Variable
 
 class PartialConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=1, bias=False, multi_channel=True):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=1, bias=False, dilation=1, mask_channels=1):
         super(PartialConv2d, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.kernel_size = kernel_size
+        self.mask_channels = mask_channels
+        self.kernel_size = [kernel_size, kernel_size]
         self.stride = stride
         self.padding = padding
         self.bias = bias
-        self.multi_channel = multi_channel
+        self.dilation = dilation
 
-        self.conv = nn.Conv2d(self.in_channels, self.out_channels, self.kernel_size, self.stride, self.padding, self.bias)
+        self.conv = nn.Conv2d(self.in_channels, self.out_channels, self.kernel_size, stride=self.stride, dilation=self.dilation, padding=self.padding, bias=self.bias)
 
-        if self.multi_channel:
-            self.weight_maskUpdater = torch.ones(self.out_channels, self.in_channels, self.kernel_size[0], self.kernel_size[1])
-        else:
-            self.weight_maskUpdater = torch.ones(1, 1, self.kernel_size[0], self.kernel_size[1])
+#         if self.mask_channels > 1:
+#             self.weight_maskUpdater = torch.ones(self.out_channels, self.mask_channels, self.kernel_size[0], self.kernel_size[1])
+#         else:
+        self.weight_maskUpdater = torch.ones(1, self.mask_channels, self.kernel_size[0], self.kernel_size[1])
             
         self.slide_winsize = self.weight_maskUpdater.shape[1] * self.weight_maskUpdater.shape[2] * self.weight_maskUpdater.shape[3]
 
@@ -47,18 +48,23 @@ class PartialConv2d(nn.Module):
             self.mask_ratio = torch.mul(self.mask_ratio, self.update_mask)
 
 
-        raw_out = self.conv(torch.mul(input, mask))
-
-        if self.bias is not None:
-            bias_view = self.bias.view(1, self.out_channels, 1, 1)
-            output = torch.mul(raw_out - bias_view, self.mask_ratio) + bias_view
-            output = torch.mul(output, self.update_mask)
+        if self.mask_channels > 1:
+            masked_img1 = torch.mul(input[:,:input.shape[1]//2,...], mask[:,0,...].unsqueeze(1))
+            masked_img2 = torch.mul(input[:,input.shape[1]//2:,...], mask[:,1,...].unsqueeze(1))
+            raw_out = self.conv(torch.cat((masked_img1, masked_img2), 1))
         else:
-            output = torch.mul(raw_out, self.mask_ratio)
+            raw_out = self.conv(torch.mul(input, mask))
+
+#         if self.bias is not None:
+#             bias_view = self.bias.view(1, self.out_channels, 1, 1)
+#             output = torch.mul(raw_out - bias_view, self.mask_ratio) + bias_view
+#             output = torch.mul(output, self.update_mask)
+#         else:
+        output = torch.mul(raw_out, self.mask_ratio)
 
 
-        if self.return_mask:
-            return output, self.update_mask
-        else:
-            return output
+#         if self.return_mask:
+#             return output, self.update_mask
+#         else:
+        return output, self.update_mask
         

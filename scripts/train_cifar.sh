@@ -1,4 +1,5 @@
-python train.py --dataset cifar \
+python train.py --model Unet_light \
+            --dataset cifar \
             --epochs 1 \
             --batch_size 16 \
             --image_dir dataset/cifar/test \

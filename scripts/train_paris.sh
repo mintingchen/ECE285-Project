@@ -1,4 +1,5 @@
-python train.py --dataset paris \
+python train.py --model Unet \
+            --dataset paris \
             --epochs 1 \
             --batch_size 16 \
             --image_dir dataset/paris/ \

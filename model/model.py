@@ -8,157 +8,141 @@ import torchvision.transforms as T
 
 import numpy as np
 
+from model.partconv2d import PartialConv2d
 
-class UNet(nn.Module):
-    def __init__(self, block, layers, num_classes=1000):
-        self.in_channels = 64
-        super(UNet, self).__init__()
-        self.PConv1 = self.encoder(3, 64, 7, batch_norm=False)
-        self.PConv2 = self.encoder(64, 128, 5)
-        self.PConv3 = self.encoder(128, 256, 5)
-        self.PConv4 = self.encoder(256, 512, 3)
-        self.PConv5 = self.encoder(512, 512, 3)
-        self.PConv6 = self.encoder(512, 512, 3)
-        self.PConv7 = self.encoder(512, 512, 3)
-        self.PConv8 = self.encoder(512, 512, 3)
+
+
+class Block(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_s=3, strides=2, encoding=False, bottleneck=False, decoding=False, relu=True, batchnorm=True):
+        super(Block, self).__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        self.encoding = encoding
+        self.decoding = decoding
+        self.bottleneck = bottleneck
         
-        self.UpSample1 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.PConv9 = PartialConv2d(1024, 512, 3, strides=1, padding="same")
-        
-        self.UpSample2 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.PConv10 = PartialConv2d(1024, 512, 3, strides=1, padding="same")
-        
-        self.UpSample3 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.PConv11 = PartialConv2d(1024, 512, 3, strides=1, padding="same")
-        
-        self.UpSample4 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.PConv12 = PartialConv2d(1024, 512, 3, strides=1, padding="same")
-        
-        self.UpSample5 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.PConv13 = PartialConv2d(768, 256, 3, strides=1, padding="same")
-        
-        self.UpSample6 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.PConv14 = PartialConv2d(384, 128, 3, strides=1, padding="same")
-        
-        self.UpSample7 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.PConv15 = PartialConv2d(192, 64, 3, strides=1, padding="same")
-        
-        self.UpSample8 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.PConv16 = PartialConv2d(67, 3, 3, strides=1, padding="same")
-        
-    def encoder(self, in_channels, out_channels, kernel_s, batch_norm=True):
-        layer = None
-        if batch_norm == True:
-            layer = nn.Sequential(
-                    PartialConv2d(in_channels, out_channels, kernel_s, strides=2, padding="same")
+        self.relu = relu
+        self.batchnorm = batchnorm
+
+        self.layers = None
+
+        if self.encoding:
+            self.l1 = PartialConv2d(in_channels, out_channels, kernel_s, strides, padding=kernel_s//2)
+            if self.batchnorm:
+                self.l2 = nn.Sequential(
                     nn.BatchNorm2d(out_channels),
                     nn.ReLU()
                 )
-        else:
-            layer = nn.Sequential(
-                    PartialConv2d(in_channels, out_channels, kernel_s, strides=2, padding="same")
-                    nn.ReLU()
-                )
-        return layer
+            else:
+                self.l2 = nn.ReLU()   
+                
+        elif self.decoding:
+            self.l1 = nn.Upsample(scale_factor=2, mode='nearest')
+            self.l2 = PartialConv2d(in_channels, out_channels, kernel_s, strides, padding=kernel_s//2, mask_channels=2)
         
-        
-    def decoder(self, input_layer, concat_layer, in_channels, out_channels, kernel_s, batch_norm=True):
-        layer = None
-        if batch_norm == True:
-            layer = nn.Sequential(
-                    nn.Upsample(scale_factor=2, mode='nearest'),
-                    concated_layer = torch.cat((input_layer, concat_layer), 2),
-                    PartialConv2d(in_channels*2, out_channels, kernel_s, strides=1, padding="same"),
+            if self.batchnorm:
+                self.l3 = nn.Sequential(
                     nn.BatchNorm2d(out_channels),
                     nn.LeakyReLU(0.2)
                 )
-        else:
-            layer = nn.Sequential(
-                    nn.Upsample(scale_factor=2, mode='nearest'),
-                    concated_layer = torch.cat((input_layer, concat_layer), 2),
-                    PartialConv2d(in_channels*2, out_channels, kernel_s, strides=1, padding="same"),
-                    nn.LeakyReLU(0.2)
-                )
-        return layer
+   
+                   
+                
+    def forward(self, img, mask, concat_img=0, concat_mask=0):
+        if self.encoding:
+            pconv_o, mask_o = self.l1(img, mask)
+            pconv_o = self.l2(pconv_o)
+            return pconv_o, mask_o
+
+        if self.decoding:
+            upimg_o = self.l1(img)
+            upmask_o = self.l1(mask)
+            concated_img = torch.cat((upimg_o, concat_img), 1)
+            concated_mask = torch.cat((upmask_o, concat_mask), 1)
+            pconv_o, mask_o = self.l2(concated_img, concated_mask)
+            if self.batchnorm:
+                pconv_o = self.l3(pconv_o)
+            return pconv_o, mask_o
+            
+
+class Unet(nn.Module):
+    def __init__(self, in_channels=3):
+        super(Unet, self).__init__()
+
+        self.pconv1 = Block(in_channels, 64, kernel_s=7, encoding=True, batchnorm=False)
+        self.pconv2 = Block(64, 128, kernel_s=5, encoding=True)
+        self.pconv3 = Block(128, 256, kernel_s=5, encoding=True)
+        self.pconv4 = Block(256, 512, encoding=True)
+        self.pconv5 = Block(512, 512, encoding=True)
+        self.pconv6 = Block(512, 512, encoding=True)
+        self.pconv7 = Block(512, 512, encoding=True)
+        self.pconv8 = Block(512, 512, encoding=True)
+        
+        self.pconv9 = Block(1024, 512, strides=1, decoding=True)
+        self.pconv10 = Block(1024, 512, strides=1, decoding=True)
+        self.pconv11 = Block(1024, 512, strides=1, decoding=True)
+        self.pconv12 = Block(1024, 512, strides=1, decoding=True)
+        self.pconv13 = Block(768, 256, strides=1, decoding=True)
+        self.pconv14 = Block(384, 128, strides=1, decoding=True)
+        self.pconv15 = Block(192, 64, strides=1, decoding=True)
+        self.pconv16 = Block(67, 3, strides=1, decoding=True, batchnorm=False, relu=False)
+        self.conv2d = nn.Conv2d(3, 3, 1)
+        self.relu = nn.ReLU()
+
+    def forward(self, img, mask):
+        pconv1_img, pconv1_mask = self.pconv1(img, mask)
+        pconv2_img, pconv2_mask = self.pconv2(pconv1_img, pconv1_mask)
+        pconv3_img, pconv3_mask = self.pconv3(pconv2_img, pconv2_mask)
+        pconv4_img, pconv4_mask = self.pconv4(pconv3_img, pconv3_mask)
+        pconv5_img, pconv5_mask = self.pconv5(pconv4_img, pconv4_mask)
+        pconv6_img, pconv6_mask = self.pconv6(pconv5_img, pconv5_mask)
+        pconv7_img, pconv7_mask = self.pconv7(pconv6_img, pconv6_mask)
+        pconv8_img, pconv8_mask = self.pconv8(pconv7_img, pconv7_mask)
+        
+        pconv9_img, pconv9_mask = self.pconv9(pconv8_img, pconv8_mask, concat_img=pconv7_img, concat_mask=pconv7_mask)
+        pconv10_img, pconv10_mask = self.pconv10(pconv9_img, pconv9_mask, concat_img=pconv6_img, concat_mask=pconv6_mask)
+        pconv11_img, pconv11_mask = self.pconv11(pconv10_img, pconv10_mask, concat_img=pconv5_img, concat_mask=pconv5_mask)
+        pconv12_img, pconv12_mask = self.pconv12(pconv11_img, pconv11_mask, concat_img=pconv4_img, concat_mask=pconv4_mask)
+        pconv13_img, pconv13_mask = self.pconv13(pconv12_img, pconv12_mask, concat_img=pconv3_img, concat_mask=pconv3_mask)
+        pconv14_img, pconv14_mask = self.pconv14(pconv13_img, pconv13_mask, concat_img=pconv2_img, concat_mask=pconv2_mask)
+        pconv15_img, pconv15_mask = self.pconv15(pconv14_img, pconv14_mask, concat_img=pconv1_img, concat_mask=pconv1_mask)
+        pconv16_img, pconv16_mask = self.pconv16(pconv15_img, pconv15_mask, concat_img=img, concat_mask=mask)
+        output = self.relu(self.conv2d(pconv16_img))
+        
+        return output, pconv16_mask 
     
-    def forward(self, x):
-        h = x
-        pc1 = self.PConv1(h)
-        pc2 = self.PConv2(pc1)
-        pc3 = self.PConv3(pc2)
-        pc4 = self.PConv4(pc4)
-        pc5 = self.PConv5(pc4)
-        pc6 = self.PConv6(pc5)
-        pc7 = self.PConv7(pc6)
-        pc8 = self.PConv8(pc7)
-        
-        upsample1 = self.UpSample1(pc8)
-        concat1 = torch.cat((upsample1, pc7), 2)
-        pc9 = self.PConv9(concat1)
-        pc9 = nn.BatchNorm2d(512)(pc9)
-        pc9 = nn.LeakyReLU(0.2)(pc9)
-        
-        upsample2 = self.UpSample2(pc8)
-        concat2 = torch.cat((upsample2, pc6), 2)
-        pc10 = self.PConv10(concat2)
-        pc10 = nn.BatchNorm2d(512)(pc10)
-        pc10 = nn.LeakyReLU(0.2)(pc10)
-        
-        upsample3 = self.UpSample3(pc10)
-        concat3 = torch.cat((upsample3, pc5), 2)
-        pc11 = self.PConv11(concat3)
-        pc11 = nn.BatchNorm2d(512)(pc11)
-        pc11 = nn.LeakyReLU(0.2)(pc11)
-        
-        upsample4 = self.UpSample4(pc11)
-        concat4 = torch.cat((upsample4, pc4), 2)
-        pc12 = self.PConv12(concat4)
-        pc12 = nn.BatchNorm2d(512)(pc12)
-        pc12 = nn.LeakyReLU(0.2)(pc12)
-        
-        upsample5 = self.UpSample5(pc12)
-        concat5 = torch.cat((upsample5, pc3), 2)
-        pc13 = self.PConv13(concat5)
-        pc13 = nn.BatchNorm2d(256)(pc13)
-        pc13 = nn.LeakyReLU(0.2)(pc13)
-        
-        upsample6 = self.UpSample6(pc13)
-        concat6 = torch.cat((upsample6, pc2), 2)
-        pc14 = self.PConv14(concat6)
-        pc14 = nn.BatchNorm2d(128)(pc14)
-        pc14 = nn.LeakyReLU(0.2)(pc14)
-        
-        upsample7 = self.UpSample7(pc14)
-        concat7 = torch.cat((upsample7, pc1), 2)
-        pc15 = self.PConv15(concat7)
-        pc15 = nn.BatchNorm2d(64)(pc15)
-        pc15 = nn.LeakyReLU(0.2)(pc15)
-        
-        upsample8 = self.UpSample8(pc15)
-        concat8 = torch.cat((upsample8, x), 2)
-        pc16 = self.PConv16(concat8)
-        
-        return pc16
+class Unet_light(nn.Module):
+    def __init__(self, in_channels=3):
+        super(Unet_light, self).__init__()
 
+        self.pconv1 = Block(in_channels, 64, kernel_s=7, encoding=True, batchnorm=False)
+        self.pconv2 = Block(64, 128, kernel_s=5, encoding=True)
+        self.pconv3 = Block(128, 256, kernel_s=5, encoding=True)
+        self.pconv4 = Block(256, 512, encoding=True)
+        self.pconv5 = Block(512, 512, encoding=True)
         
-#     def encoder(x, x_mask, channels, kernel_s, batch_norm=True):
-#         x, x_mask = PartialConv2d(channels, kernel_s, strides=2, padding="same")([x, x_mask])
-#         if batch_norm == True:
-#             x = nn.BatchNorm2d(channels)(x)
-#         x = nn.ReLU()(x)
-#         return x, x_mask
-#     def decoder(x, x_mask, z, z_mask, channels, kernel_s, batch_norm=True):
-#         x = nn.Upsample(scale_factor=2, mode='nearest')(x)
-#         x_mask = nn.Upsample(scale_factor=2, mode='nearest')(x_mask)
-#         x_concat = torch.cat((x, z), 2) 
-#         mask_concat = torch.cat((x_mask, z_mask), 2) 
-#         x, x_mask = PartialConv2d(channels, kernel_s, strides=1, padding="same")([x_concat, mask_concat])
-#         if batch_norm == True:
-#             x = nn.BatchNorm2d(channels)(x)
-#         x = nn.LeakyReLU(0.2)(x)
-#         return x, x_mask
+        self.pconv12 = Block(1024, 512, strides=1, decoding=True)
+        self.pconv13 = Block(768, 256, strides=1, decoding=True)
+        self.pconv14 = Block(384, 128, strides=1, decoding=True)
+        self.pconv15 = Block(192, 64, strides=1, decoding=True)
+        self.pconv16 = Block(67, 3, strides=1, decoding=True, batchnorm=False, relu=False)
+        self.conv2d = nn.Conv2d(3, 3, 1)
+        self.relu = nn.ReLU()
 
-       
+    def forward(self, img, mask):
+        pconv1_img, pconv1_mask = self.pconv1(img, mask)
+        pconv2_img, pconv2_mask = self.pconv2(pconv1_img, pconv1_mask)
+        pconv3_img, pconv3_mask = self.pconv3(pconv2_img, pconv2_mask)
+        pconv4_img, pconv4_mask = self.pconv4(pconv3_img, pconv3_mask)
+        pconv5_img, pconv5_mask = self.pconv5(pconv4_img, pconv4_mask)
         
+        pconv12_img, pconv12_mask = self.pconv12(pconv5_img, pconv5_mask, concat_img=pconv4_img, concat_mask=pconv4_mask)
+        pconv13_img, pconv13_mask = self.pconv13(pconv12_img, pconv12_mask, concat_img=pconv3_img, concat_mask=pconv3_mask)
+        pconv14_img, pconv14_mask = self.pconv14(pconv13_img, pconv13_mask, concat_img=pconv2_img, concat_mask=pconv2_mask)
+        pconv15_img, pconv15_mask = self.pconv15(pconv14_img, pconv14_mask, concat_img=pconv1_img, concat_mask=pconv1_mask)
+        pconv16_img, pconv16_mask = self.pconv16(pconv15_img, pconv15_mask, concat_img=img, concat_mask=mask)
+        output = self.relu(self.conv2d(pconv16_img))
         
-
+        return output, pconv16_mask 

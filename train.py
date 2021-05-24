@@ -13,30 +13,32 @@ import numpy as np
 import torch, argparse, pdb
 
 from data import CreateDataloader
+from model import CreateModel
 
 from tensorboardX import SummaryWriter
 from options import TrainParser, set_seeds, print_options
 import torchvision.utils as vutils
 import cv2
 
-def train(dataset, epoch, iter_num):
+def train(model, dataset, epoch):
     for i, data in enumerate(dataset):
-        iter_num += 1
-        print(i)
-
         masked_img = data['masked_img']
         image = data['image']
         mask = data['mask']
         
-        masked_img = masked_img[0].permute((1, 2, 0))
-        masked_img = masked_img.cpu().numpy()
-        image = image[0].permute((1, 2, 0))
-        image = image.cpu().numpy()
-        mask = mask[0].permute((1, 2, 0))
-        mask = mask.cpu().numpy()
-        cv2.imwrite("masked_img.png", masked_img)
-        cv2.imwrite("image.png", image)
-        cv2.imwrite("mask.png", mask)
+#         masked_img = masked_img[0].permute((1, 2, 0))
+#         masked_img = masked_img.cpu().numpy()
+#         image = image[0].permute((1, 2, 0))
+#         image = image.cpu().numpy()
+#         mask = mask[0].permute((1, 2, 0))
+#         mask = mask.cpu().numpy()
+#         cv2.imwrite("masked_img.png", masked_img)
+#         cv2.imwrite("image.png", image)
+#         cv2.imwrite("mask.png", mask)
+
+        output, _ = model(image, mask)
+    
+        print(output.shape)
 
 
 if __name__ == '__main__':
@@ -49,10 +51,13 @@ if __name__ == '__main__':
 
     # dataset
     trainset, valset = CreateDataloader(args)
+    
+    # model
+    model = CreateModel(args)
+    
 
-    iter_num = 0
     for epoch in range(args.epochs):
         print('\nEpoch %s' % (epoch+1))
 
-        train(trainset, epoch, iter_num)
+        train(model, trainset, epoch)
 
