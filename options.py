@@ -19,9 +19,13 @@ class TrainParser():
         parser = argparse.ArgumentParser(description='Inpainting Training')
         # Frequently used commands
         parser.add_argument('--epochs', type=int, default=1, help='')
+        parser.add_argument('--lr', type=float, default=0.0001, help='')
+        parser.add_argument('--weight_decay', type=float, default=2e-5, help='')
         parser.add_argument('--batch_size', type=int, default=16, help='')
         parser.add_argument('--model', type=str, default='Unet', help='')
         parser.add_argument('--dataset', type=str, default='cifar', help='')
+        parser.add_argument('--save_dir', type=str, default='checkpoints/', help='')
+        parser.add_argument('--name', type=str, default='TEST', help='')
         parser.add_argument('--image_dir', type=str, default='dataset/paris/', help='')
         parser.add_argument('--image_list_train', type=str, default='namelist/paris_training.txt', help='')
         parser.add_argument('--image_list_test', type=str, default='namelist/paris_training.txt', help='')
@@ -49,11 +53,11 @@ def print_options(args):
         message += '------------------------- End -------------------------'
         print(message)
 
-#         file = open(os.path.join(args.save_dir, args.name, 'configs'), 'w')
-#         file.write(message)
-#         file.close()
+        file = open(os.path.join(args.save_dir, args.name, 'configs'), 'w')
+        file.write(message)
+        file.close()
 
-def set_seeds(opt_in, is_train=True):
+def set_init(opt_in, is_train=True):
     set_seeds(1234)
     opt = opt_in
 

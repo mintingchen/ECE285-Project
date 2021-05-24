@@ -12,41 +12,69 @@ import torchvision.transforms as transforms
 import numpy as np 
 import torch, argparse, pdb
 
+from tensorboardX import SummaryWriter
+from options import TrainParser, set_init, print_options
+import torchvision.utils as vutils
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+
 from data import CreateDataloader
 from model import CreateModel
+from loss import VGG16PartialLoss
 
-from tensorboardX import SummaryWriter
-from options import TrainParser, set_seeds, print_options
-import torchvision.utils as vutils
-import cv2
+def save_checkpoint(state, filename):
+    torch.save(state, filename)
 
-def train(model, dataset, epoch):
+def train(model, criterion, optimizer, dataset, epoch):
+    total_loss = 0
     for i, data in enumerate(dataset):
-        masked_img = data['masked_img']
-        image = data['image']
-        mask = data['mask']
+        optimizer.zero_grad()
         
-#         masked_img = masked_img[0].permute((1, 2, 0))
-#         masked_img = masked_img.cpu().numpy()
-#         image = image[0].permute((1, 2, 0))
-#         image = image.cpu().numpy()
-#         mask = mask[0].permute((1, 2, 0))
-#         mask = mask.cpu().numpy()
-#         cv2.imwrite("masked_img.png", masked_img)
-#         cv2.imwrite("image.png", image)
-#         cv2.imwrite("mask.png", mask)
+        masked_img = data['masked_img'].to(device)
+        image = data['image'].to(device)
+        mask = data['mask'].to(device)
 
         output, _ = model(image, mask)
-    
-        print(output.shape)
+        
+        loss, vgg_loss, style_loss = criterion(output, image)
+        loss.backward()
+        optimizer.step()
+        
+        total_loss += loss
+        
+    masked_img = masked_img[0].permute((1, 2, 0))
+    masked_img = masked_img.cpu().numpy()
+    image = image[0].permute((1, 2, 0))
+    image = image.cpu().numpy()
+    mask = mask[0].permute((1, 2, 0))
+    mask = mask.cpu().numpy()
+    cv2.imwrite("masked_img.png", masked_img)
+    cv2.imwrite("image.png", image)
+    cv2.imwrite("mask.png", mask)
+    output = output[0].permute((1, 2, 0))
+    output = output.detach().cpu().numpy()
+    cv2.imwrite("output.png", output)
+        
+    total_loss /= len(dataset)
+        
+    return total_loss
 
 
 if __name__ == '__main__':
 
     args_parser = TrainParser().parser
     args = args_parser.parse_args()
-#     args = set_seeds(args)
-
+    args = set_init(args)
+    
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
+    
+    # create folders
+    if not os.path.exists(os.path.join(args.save_dir, args.name)):
+        os.makedirs(os.path.join(args.save_dir, args.name))
+        
     print_options(args)
 
     # dataset
@@ -54,10 +82,32 @@ if __name__ == '__main__':
     
     # model
     model = CreateModel(args)
+    model.to(device)
+    
+    # loss
+    criterion = VGG16PartialLoss(device)
+    
+    # optimizer
+    optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=args.lr,
+            weight_decay=args.weight_decay,
+        )
+    scheduler = ReduceLROnPlateau(
+            optimizer, 'min', patience=3,
+            min_lr=1e-10, verbose=True
+        )
     
 
     for epoch in range(args.epochs):
         print('\nEpoch %s' % (epoch+1))
 
-        train(model, trainset, epoch)
+        total_loss = train(model, criterion, optimizer, trainset, epoch)
+        scheduler.step(total_loss)
+        
+        save_checkpoint({
+            'epoch': epoch+1,
+            'state_dict':model.state_dict(),
+            'optimizer':optimizer.state_dict(),
+            }, '%s/%s/%s.pt' % (args.save_dir, args.name, epoch+1))
 

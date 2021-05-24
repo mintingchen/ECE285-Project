@@ -1,7 +1,10 @@
+NAME=$1
 python train.py --model Unet \
             --dataset paris \
             --epochs 1 \
             --batch_size 16 \
+            --save_dir ./checkpoints/ \
+            --name $NAME \
             --image_dir dataset/paris/ \
             --image_list_train namelist/paris_training.txt \
             --image_list_test namelist/paris_training.txt \
