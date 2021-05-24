@@ -40,7 +40,7 @@ def train(model, criterion, optimizer, dataset, epoch):
         loss.backward()
         optimizer.step()
         
-        total_loss += loss
+        total_loss += loss.item()
         
     masked_img = masked_img[0].permute((1, 2, 0))
     masked_img = masked_img.cpu().numpy()
@@ -55,6 +55,7 @@ def train(model, criterion, optimizer, dataset, epoch):
     output = output.detach().cpu().numpy()
     cv2.imwrite("output.png", output)
         
+    print(len(dataset))
     total_loss /= len(dataset)
         
     return total_loss
@@ -105,9 +106,12 @@ if __name__ == '__main__':
         total_loss = train(model, criterion, optimizer, trainset, epoch)
         scheduler.step(total_loss)
         
-        save_checkpoint({
-            'epoch': epoch+1,
-            'state_dict':model.state_dict(),
-            'optimizer':optimizer.state_dict(),
-            }, '%s/%s/%s.pt' % (args.save_dir, args.name, epoch+1))
+        print(total_loss)
+        
+        if epoch%args.save_interval == 0 or epoch == args.epochs-1:
+            save_checkpoint({
+                'epoch': epoch+1,
+                'state_dict':model.state_dict(),
+                'optimizer':optimizer.state_dict(),
+                }, '%s/%s/%s.pt' % (args.save_dir, args.name, epoch+1))
 

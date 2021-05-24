@@ -32,6 +32,7 @@ class TrainParser():
         parser.add_argument('--mask_dir', type=str, default='dataset/mask/testing_mask_dataset/', help='')
         parser.add_argument('--mask_list_train', type=str, default='namelist/nv_mask_training.txt', help='')
         parser.add_argument('--mask_list_test', type=str, default='namelist/nv_mask_training.txt', help='')
+        parser.add_argument('--save_interval', type=int, default=5, help='')
 
         self.parser = parser
 
