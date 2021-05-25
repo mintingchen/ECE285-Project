@@ -55,7 +55,6 @@ def train(model, criterion, optimizer, dataset, epoch):
     output = output.detach().cpu().numpy()
     cv2.imwrite("output.png", output)
         
-    print(len(dataset))
     total_loss /= len(dataset)
         
     return total_loss
