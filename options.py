@@ -52,6 +52,7 @@ class TestParser():
         parser.add_argument('--mask_dir', type=str, default='dataset/mask/testing_mask_dataset/', help='')
         parser.add_argument('--mask_list_train', type=str, default='namelist/nv_mask_training.txt', help='')
         parser.add_argument('--mask_list_test', type=str, default='namelist/nv_mask_training.txt', help='')
+        parser.add_argument('--show_ratio', type=int, default=10, help='')
         self.parser = parser
 
 def print_options(args):

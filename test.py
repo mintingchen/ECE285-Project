@@ -21,9 +21,11 @@ def load_checkpoint(filename):
     
     # model
     model = CreateModel(args)
-    parameters = model.parameters() if gfilter is None else [{'params': model.parameters()}, {'params': gfilter.parameters()}]
+    parameters = model.parameters() 
+    #if gfilter is None else [{'params': model.parameters()}, {'params': gfilter.parameters()}]
     
     # optimizer = torch.optim.Adam(parameters, lr=0.0001, betas=(0.9, 0.99))
+    #print(ckpt['state_dict'])
     epoch = ckpt['epoch']
     model.load_state_dict(ckpt['state_dict']) # load 
     # optimizer.load_state_dict(ckpt['optimizer'])
@@ -39,11 +41,16 @@ if __name__ == '__main__':
     dataset = CreateDataloader(args, mode='test')
     print(args.checkpoint)
     model, epoch = load_checkpoint(args.checkpoint)
-    rmse_inp_all, psnr_inp_all, ssim_inp_all = 0, 0, 0, 0, 0, 0
+    rmse_inp_all, psnr_inp_all, ssim_inp_all = 0, 0, 0
+    seq_path = args.seq_path
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
     
     with torch.no_grad():
         model.eval()
-        for i, item in enumerate(dataset):
+        for i, data in enumerate(dataset):
             if not os.path.exists(seq_path):
                 os.makedirs(seq_path)
             masked_img = data['masked_img'].to(device)
@@ -55,6 +62,11 @@ if __name__ == '__main__':
                 
 #             inp = item['A'].cuda()
 #             gt = item['B'].cuda()
+            masked_img = torch.squeeze(masked_img.detach(), dim=0) * 255.0 # since batch = 1, squeeze the first channel
+            masked_img = torch.clamp(masked_img, min = 0, max = 255)
+            masked_img = masked_img.permute((1, 2, 0))
+            masked_img = masked_img.cpu().numpy()
+    
             output = torch.squeeze(output.detach(), dim=0) * 255.0 # since batch = 1, squeeze the first channel
             output = torch.clamp(output, min = 0, max = 255)
             output = output.permute((1, 2, 0))
@@ -70,8 +82,8 @@ if __name__ == '__main__':
             ssim = compare_ssim(output, gt, data_range=255.0, multichannel=True)
             if i % args.show_ratio == 0:
                 cv2.imwrite('{}/{:05d}_output.png'.format(seq_path, i), output.astype(np.uint8))
-                cv2.imwrite('{}/{:05d}_input.png'.format(seq_path, i), inp.astype(np.uint8))
-                cv2.imwrite('{}/{:05d}_gt.png'.format(seq_path), i, gt.astype(np.uint8))
+                cv2.imwrite('{}/{:05d}_input.png'.format(seq_path, i), masked_img.astype(np.uint8))
+                cv2.imwrite('{}/{:05d}_gt.png'.format(seq_path, i), gt.astype(np.uint8))
             rmse_inp_all += rmse
             psnr_inp_all += psnr
             ssim_inp_all += ssim
