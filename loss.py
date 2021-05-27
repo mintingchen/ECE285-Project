@@ -214,7 +214,7 @@ class VGG16PartialLoss(PerceptualLoss):
     VGG16 perceptual loss
     """
     def __init__(self, device, l1_alpha=5.0, perceptual_alpha=0.05, style_alpha=120,
-                 smooth_alpha=0, feat_num=3, vgg_path='~/.torch/vgg16-397923af.pth'):
+                 smooth_alpha=0.1, feat_num=3, vgg_path='~/.torch/vgg16-397923af.pth'):
         """
         Init
         :param l1_alpha: weight of the l1 loss

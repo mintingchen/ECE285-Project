@@ -44,18 +44,19 @@ def train(model, criterion, optimizer, dataset, epoch):
         
         if i%200 == 0:
             print("Iter[{}] Loss => {:.4}".format(i, loss))
-        
+    
     masked_img = masked_img[0].permute((1, 2, 0))
-    masked_img = masked_img.cpu().numpy()
+    masked_img = masked_img.cpu().numpy() * 255.0
     image = image[0].permute((1, 2, 0))
-    image = image.cpu().numpy()
+    image = image.cpu().numpy() * 255.0
     mask = mask[0].permute((1, 2, 0))
     mask = mask.cpu().numpy()
     cv2.imwrite("masked_img.png", masked_img)
     cv2.imwrite("image.png", image)
     cv2.imwrite("mask.png", mask)
+    output = torch.clamp(output, min = 0, max = 1)
     output = output[0].permute((1, 2, 0))
-    output = output.detach().cpu().numpy()
+    output = output.detach().cpu().numpy() * 255.0
     cv2.imwrite("output.png", output)
         
     total_loss /= len(dataset)
@@ -98,7 +99,7 @@ if __name__ == '__main__':
             weight_decay=args.weight_decay,
         )
     scheduler = ReduceLROnPlateau(
-            optimizer, 'min', patience=5,
+            optimizer, 'min', patience=3,
             min_lr=1e-10, verbose=True
         )
     

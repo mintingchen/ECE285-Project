@@ -43,6 +43,7 @@ class CifarTrain(Dataset):
     def __getitem__(self, index):
         img = self.images[index]
         img = img.reshape(3,32,32).transpose(1,2,0)
+        img = img.astype(np.float) / 255.0
         mask = cv2.imread(self.mask_dir+self.masks[int(random.random()*len(self.masks))], cv2.IMREAD_GRAYSCALE)
         
         mask = cv2.resize(mask, (img.shape[1], img.shape[0]))
@@ -80,6 +81,7 @@ class CifarTest(Dataset):
     def __getitem__(self, index):
         img = self.images[index]
         img = img.reshape(3,32,32).transpose(1,2,0)
+        img = img.astype(np.float) / 255.0
         mask = cv2.imread(self.mask_dir+self.masks[index%len(self.masks)], cv2.IMREAD_GRAYSCALE)
 
         mask = cv2.resize(mask, (img.shape[1], img.shape[0]))

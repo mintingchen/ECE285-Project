@@ -41,6 +41,7 @@ class ParisTrain(Dataset):
         img_crop_x = random.randint(0, img.shape[1] - self.patch_width)
 
         img = img[img_crop_y : img_crop_y + self.patch_height, img_crop_x : img_crop_x + self.patch_width, :]
+        img = img.astype(np.float) / 255.0
         mask[mask>1] = 1
         mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
         masked_img = img * mask
@@ -85,6 +86,7 @@ class ParisTest(Dataset):
         img_crop_x = img.shape[1] // 2 - self.patch_width // 2
 
         img = img[img_crop_y : img_crop_y + self.patch_height, img_crop_x : img_crop_x + self.patch_width, :]
+        img = img.astype(np.float) / 255.0
         mask = mask[mask_crop_y : mask_crop_y + self.patch_height, mask_crop_x : mask_crop_x + self.patch_width]
         mask[mask>1] = 1
         mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
