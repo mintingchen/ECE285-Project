@@ -298,4 +298,4 @@ class VGG16PartialLoss(PerceptualLoss):
             )
 
         tot = l1_loss + vgg_loss + style_loss + smooth_loss
-        return tot, vgg_loss, style_loss
+        return tot, l1_loss, vgg_loss, style_loss, smooth_loss

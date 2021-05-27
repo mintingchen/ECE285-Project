@@ -2,10 +2,10 @@ NAME=$1
 python train.py --model Unet \
             --dataset paris \
             --epochs 500 \
-            --batch_size 8 \
+            --batch_size 4 \
             --save_dir ./checkpoints/ \
             --name $NAME \
-            --lr 0.001 \
+            --lr 0.0001 \
             --save_interval 10 \
             --image_dir dataset/paris/ \
             --image_list_train namelist/paris_training.txt \
