@@ -23,24 +23,26 @@ class ParisTrain(Dataset):
         self.images = [x.strip() for x in open(image_list)]
         self.mask_dir = mask_dir
         self.masks = [x.strip() for x in open(mask_list)]
-        self.patch_height = 512
-        self.patch_width = 512
+        self.patch_height = 256
+        self.patch_width = 256
 
     def __getitem__(self, index):
         img = cv2.imread(self.image_dir+self.images[index])
         mask = cv2.imread(self.mask_dir+self.masks[int(random.random()*len(self.masks))], cv2.IMREAD_GRAYSCALE)
         
         # The coordinate of the top-left corner for the croping patch 
-        if img.shape[0] < self.patch_height or img.shape[1] < self.patch_width:
+        if img.shape[0] < self.patch_height*2 or img.shape[1] < self.patch_width*2:
             if img.shape[0] < img.shape[1]:
-                img = cv2.resize(img, (int(img.shape[1]/img.shape[0]*self.patch_width), self.patch_height))
+                img = cv2.resize(img, (int(img.shape[1]/img.shape[0]*self.patch_width*2), self.patch_height*2))
             else:
-                img = cv2.resize(img, (self.patch_width, int(img.shape[0]/img.shape[1]*self.patch_height)))
+                img = cv2.resize(img, (self.patch_width*2, int(img.shape[0]/img.shape[1]*self.patch_height*2)))
+        mask = cv2.resize(mask, (self.patch_width, self.patch_height))
         
-        img_crop_y = random.randint(0, img.shape[0] - self.patch_height)
-        img_crop_x = random.randint(0, img.shape[1] - self.patch_width)
+        img_crop_y = random.randint(0, img.shape[0] - self.patch_height*2)
+        img_crop_x = random.randint(0, img.shape[1] - self.patch_width*2)
 
         img = img[img_crop_y : img_crop_y + self.patch_height, img_crop_x : img_crop_x + self.patch_width, :]
+        img = cv2.resize(img, (self.patch_width, self.patch_height))
         img = img.astype(np.float) / 255.0
         mask[mask>1] = 1
         mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
@@ -68,26 +70,27 @@ class ParisTest(Dataset):
         self.images = [x.strip() for x in open(image_list)]
         self.mask_dir = mask_dir
         self.masks = [x.strip() for x in open(mask_list)]
-        self.patch_height = 512
-        self.patch_width = 512
+        self.patch_height = 256
+        self.patch_width = 256
 
     def __getitem__(self, index):
         img = cv2.imread(self.image_dir+self.images[index])
         mask = cv2.imread(self.mask_dir+self.masks[index%len(self.masks)], cv2.IMREAD_GRAYSCALE)
 
         # The coordinate of the top-left corner for the croping patch 
-        if img.shape[0] < self.patch_height or img.shape[1] < self.patch_width:
+        if img.shape[0] < self.patch_height*2 or img.shape[1] < self.patch_width*2:
             if img.shape[0] < img.shape[1]:
-                img = cv2.resize(img, (int(img.shape[1]/img.shape[0]*self.patch_width), self.patch_height))
+                img = cv2.resize(img, (int(img.shape[1]/img.shape[0]*self.patch_width*2), self.patch_height*2))
             else:
-                img = cv2.resize(img, (self.patch_width, int(img.shape[0]/img.shape[1]*self.patch_height)))
+                img = cv2.resize(img, (self.patch_width*2, int(img.shape[0]/img.shape[1]*self.patch_height)))
+        mask = cv2.resize(mask, (self.patch_width, self.patch_height))
                 
-        img_crop_y = img.shape[0] // 2 - self.patch_height // 2
-        img_crop_x = img.shape[1] // 2 - self.patch_width // 2
+        img_crop_y = img.shape[0] // 2 - self.patch_height
+        img_crop_x = img.shape[1] // 2 - self.patch_width
 
         img = img[img_crop_y : img_crop_y + self.patch_height, img_crop_x : img_crop_x + self.patch_width, :]
+        img = cv2.resize(img, (self.patch_width, self.patch_height))
         img = img.astype(np.float) / 255.0
-        mask = mask[mask_crop_y : mask_crop_y + self.patch_height, mask_crop_x : mask_crop_x + self.patch_width]
         mask[mask>1] = 1
         mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
         masked_img = img * mask
