@@ -5,7 +5,7 @@ from torch.autograd import Variable
 from torchvision import models
 
 import os
-os.environ['TORCH_HOME']='/home/xiwei/ece285/ECE285-Project'
+os.environ['TORCH_HOME']='/home/mic007/285/ECE285-Project'
 
 
 def gram_matrix(input_tensor):
