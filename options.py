@@ -42,8 +42,18 @@ class TestParser():
         parser = argparse.ArgumentParser(description='Inpainting Testing')
         # Frequently used commands
         parser.add_argument('--model', type=str, help='Model type')
-        parser.add_argument('--task', type=str, help='Task type: denoising_SR, denoising, SR')
         parser.add_argument('--dataset', type=str, help='Dataset type: unity, ue, ueGB')
+        parser.add_argument('--checkpoint', type=str, help='model info')
+        parser.add_argument('--name', type=str, help='name')
+        parser.add_argument('--seq_path', type=str, help='output dir')
+        parser.add_argument('--image_dir', type=str, default='dataset/paris/', help='')
+        parser.add_argument('--image_list_train', type=str, default='namelist/paris_training.txt', help='')
+        parser.add_argument('--image_list_test', type=str, default='namelist/paris_training.txt', help='')
+        parser.add_argument('--mask_dir', type=str, default='dataset/mask/testing_mask_dataset/', help='')
+        parser.add_argument('--mask_list_train', type=str, default='namelist/nv_mask_training.txt', help='')
+        parser.add_argument('--mask_list_test', type=str, default='namelist/nv_mask_training.txt', help='')
+        parser.add_argument('--show_ratio', type=int, default=10, help='')
+        self.parser = parser
 
 def print_options(args):
         message = ''

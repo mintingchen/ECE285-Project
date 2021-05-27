@@ -1,12 +1,19 @@
 NAME=$1
 python train.py --model Unet_light \
             --dataset cifar \
+<<<<<<< Updated upstream
             --epochs 500 \
             --batch_size 64 \
             --lr 0.0001 \
             --save_dir ./checkpoints/ \
             --name $NAME \
             --save_interval 10 \
+=======
+            --epochs 100 \
+            --batch_size 16 \
+            --save_dir ./checkpoints/ \
+            --name $NAME \
+>>>>>>> Stashed changes
             --image_dir dataset/cifar/train \
             --image_list_train namelist/paris_training.txt \
             --image_list_test namelist/paris_testing.txt \
