@@ -5,42 +5,85 @@ from torch.autograd import Variable
 from torchvision import models
 
 import os
-os.environ['TORCH_HOME']='/home/mic007/285/ECE285-Project'
+os.environ['TORCH_HOME']='/home/xiwei/ece285/ECE285-Project'
 
-
-def gram_matrix(input_tensor):
-    """
-    Compute Gram matrix
-    :param input_tensor: input tensor with shape
-     (batch_size, nbr_channels, height, width)
-    :return: Gram matrix of y
-    """
-    (b, ch, h, w) = input_tensor.size()
-    features = input_tensor.view(b, ch, w * h)
-    features_t = features.transpose(1, 2)
-    
-    # more efficient and formal way to avoid underflow for mixed precision training
-    input = torch.zeros(b, ch, ch).type(features.type())
-    gram = torch.baddbmm(input, features, features_t, beta=0, alpha=1./(ch * h * w), out=None)
-    
-    # naive way to avoid underflow for mixed precision training
-    # features = features / (ch * h)
-    # gram = features.bmm(features_t) / w
-
-    # for fp32 training, it is also safe to use the following:
-    # gram = features.bmm(features_t) / (ch * h * w)
-
-    return gram
-
-class PerceptualLoss(nn.Module):
-    """
-    Perceptual Loss Module
-    """
+class Vgg16(nn.Module):
     def __init__(self):
-        """Init"""
+        super(Vgg16, self).__init__()
+        features = models.vgg16(pretrained=True).features
+        self.to_relu_1_2 = nn.Sequential()
+        self.to_relu_2_2 = nn.Sequential()
+        self.to_relu_3_3 = nn.Sequential()
+        self.to_relu_4_3 = nn.Sequential()
+
+        for x in range(4):
+            self.to_relu_1_2.add_module(str(x), features[x])
+            self.to_relu_1_2.add_module(str(4), nn.AvgPool2d(kernel_size=2, stride=2))
+        for x in range(4, 9):
+            self.to_relu_2_2.add_module(str(x+1), features[x])
+            self.to_relu_2_2.add_module(str(9), nn.AvgPool2d(kernel_size=2, stride=2))
+        for x in range(9, 16):
+            self.to_relu_3_3.add_module(str(x+2), features[x])
+            self.to_relu_3_3.add_module(str(16), nn.AvgPool2d(kernel_size=2, stride=2))
+        for x in range(16, 23):
+            self.to_relu_4_3.add_module(str(x+3), features[x])
+            self.to_relu_4_3.add_module(str(23), nn.AvgPool2d(kernel_size=2, stride=2))
+
+        # don't need the gradients, just want the features
+        for param in self.parameters():
+            param.requires_grad = False
+
+    def forward(self, x):
+        h = self.to_relu_1_2(x)
+        h_relu_1_2 = h
+        h = self.to_relu_2_2(h)
+        h_relu_2_2 = h
+        h = self.to_relu_3_3(h)
+        h_relu_3_3 = h
+        h = self.to_relu_4_3(h)
+        h_relu_4_3 = h
+        out = (h_relu_1_2, h_relu_2_2, h_relu_3_3, h_relu_4_3)
+        return out
+
+
+def gram(x):
+    (bs, ch, h, w) = x.size()
+    f = x.view(bs, ch, w * h)
+    f_T = f.transpose(1, 2)
+    G = f.bmm(f_T) / (ch * h * w)
+    return G
+
+
+# perceptual loss and (spatial) style loss
+class VGG16PartialLoss():
+    """
+    VGG16 perceptual loss
+    """
+    def __init__(self, device, l1_alpha=5.0, perceptual_alpha=0.05, style_alpha=120,
+                 smooth_alpha=0.1, feat_num=3, vgg_path='~/.torch/vgg16-397923af.pth'):
+        """
+        Init
+        :param l1_alpha: weight of the l1 loss
+        :param perceptual_alpha: weight of the perceptual loss
+        :param style_alpha: weight of the style loss
+        :param smooth_alpha: weight of the regularizer
+        :param feat_num: number of feature maps
+        """
         super().__init__()
-        self.l1_loss = torch.nn.L1Loss()
-        self.mse_loss = torch.nn.MSELoss()
+        self.device = device
+
+        self.vgg16partial = Vgg16().eval()
+        self.vgg16partial.to(device)
+
+        self.loss_fn = torch.nn.L1Loss(size_average=True)
+
+        self.l1_weight = l1_alpha
+        self.vgg_weight = perceptual_alpha
+        self.style_weight = style_alpha
+        self.regularize_weight = smooth_alpha
+
+        self.dividor = 1
+        self.feat_num = feat_num
 
     @staticmethod
     def normalize_batch(batch, div_factor=255.):
@@ -67,179 +110,7 @@ class PerceptualLoss(nn.Module):
         batch = torch.div(batch, Variable(std))
         return batch
 
-    def forward(self, x, y):
-        """
-        Forward
-        :param x: input tensor with shape
-         (batch_size, nbr_channels, height, width)
-        :param y: input tensor with shape
-         (batch_size, nbr_channels, height, width)
-        :return: l1 loss between the normalized data
-        """
-        x = self.normalize_batch(x)
-        y = self.normalize_batch(y)
-        return self.l1_loss(x, y)
-
-def make_vgg16_layers(style_avg_pool = False):
-    """
-    make_vgg16_layers
-    Return a custom vgg16 feature module with avg pooling
-    """
-    vgg16_cfg = [
-        64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M',
-        512, 512, 512, 'M', 512, 512, 512, 'M'
-    ]
-
-    layers = []
-    in_channels = 3
-    for v in vgg16_cfg:
-        if v == 'M':
-            if style_avg_pool:
-                layers += [nn.AvgPool2d(kernel_size=2, stride=2)]
-            else:
-                layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
-        else:
-            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
-            layers += [conv2d, nn.ReLU(inplace=True)]
-            in_channels = v
-    return nn.Sequential(*layers)
-
-class VGG16Partial(nn.Module):
-    """
-    VGG16 partial model
-    """
-    def __init__(self, vgg_path='~/.torch/vgg16-397923af.pth', layer_num=3):
-        """
-        Init
-        :param layer_num: number of layers
-        """
-        super().__init__()
-        vgg_model = models.vgg16(pretrained=True)
-        vgg_model.features = make_vgg16_layers()
-#         vgg_model.load_state_dict(
-#             torch.load(vgg_path, map_location='cpu')
-#         )
-        vgg_pretrained_features = vgg_model.features
-
-        assert layer_num > 0
-        assert isinstance(layer_num, int)
-        self.layer_num = layer_num
-
-        self.slice1 = torch.nn.Sequential()
-        for x in range(5):  # 4
-            self.slice1.add_module(str(x), vgg_pretrained_features[x])
-
-        if self.layer_num > 1:
-            self.slice2 = torch.nn.Sequential()
-            for x in range(5, 10):  # (4, 9)
-                self.slice2.add_module(str(x), vgg_pretrained_features[x])
-
-        if self.layer_num > 2:
-            self.slice3 = torch.nn.Sequential()
-            for x in range(10, 17):  # (9, 16)
-                self.slice3.add_module(str(x), vgg_pretrained_features[x])
-
-        if self.layer_num > 3:
-            self.slice4 = torch.nn.Sequential()
-            for x in range(17, 24):  # (16, 23)
-                self.slice4.add_module(str(x), vgg_pretrained_features[x])
-
-        for param in self.parameters():
-            param.requires_grad = False
-
-    @staticmethod
-    def normalize_batch(batch, div_factor=1.0):
-        """
-        Normalize batch
-        :param batch: input tensor with shape
-         (batch_size, nbr_channels, height, width)
-        :param div_factor: normalizing factor before data whitening
-        :return: normalized data, tensor with shape
-         (batch_size, nbr_channels, height, width)
-        """
-        # normalize using imagenet mean and std
-        mean = batch.data.new(batch.data.size())
-        std = batch.data.new(batch.data.size())
-        mean[:, 0, :, :] = 0.485
-        mean[:, 1, :, :] = 0.456
-        mean[:, 2, :, :] = 0.406
-        std[:, 0, :, :] = 0.229
-        std[:, 1, :, :] = 0.224
-        std[:, 2, :, :] = 0.225
-        batch = torch.div(batch, div_factor)
-
-        batch -= Variable(mean)
-        batch = torch.div(batch, Variable(std))
-        return batch
-
-    def forward(self, x):
-        """
-        Forward, get features used for perceptual loss
-        :param x: input tensor with shape
-         (batch_size, nbr_channels, height, width)
-        :return: list of self.layer_num feature maps used to compute the
-         perceptual loss
-        """
-        h = self.slice1(x)
-        h1 = h
-
-        output = []
-
-        if self.layer_num == 1:
-            output = [h1]
-        elif self.layer_num == 2:
-            h = self.slice2(h)
-            h2 = h
-            output = [h1, h2]
-        elif self.layer_num == 3:
-            h = self.slice2(h)
-            h2 = h
-            h = self.slice3(h)
-            h3 = h
-            output = [h1, h2, h3]
-        elif self.layer_num >= 4:
-            h = self.slice2(h)
-            h2 = h
-            h = self.slice3(h)
-            h3 = h
-            h = self.slice4(h)
-            h4 = h
-            output = [h1, h2, h3, h4]
-        return output
-
-
-# perceptual loss and (spatial) style loss
-class VGG16PartialLoss(PerceptualLoss):
-    """
-    VGG16 perceptual loss
-    """
-    def __init__(self, device, l1_alpha=5.0, perceptual_alpha=0.05, style_alpha=120,
-                 smooth_alpha=0.1, feat_num=3, vgg_path='~/.torch/vgg16-397923af.pth'):
-        """
-        Init
-        :param l1_alpha: weight of the l1 loss
-        :param perceptual_alpha: weight of the perceptual loss
-        :param style_alpha: weight of the style loss
-        :param smooth_alpha: weight of the regularizer
-        :param feat_num: number of feature maps
-        """
-        super().__init__()
-        self.device = device
-
-        self.vgg16partial = VGG16Partial(vgg_path=vgg_path).eval()
-        self.vgg16partial.to(device)
-
-        self.loss_fn = torch.nn.L1Loss(size_average=True)
-
-        self.l1_weight = l1_alpha
-        self.vgg_weight = perceptual_alpha
-        self.style_weight = style_alpha
-        self.regularize_weight = smooth_alpha
-
-        self.dividor = 1
-        self.feat_num = feat_num
-
-    def forward(self, output0, target0):
+    def __call__(self, output0, target0):
         """
         Forward
         assuming both output0 and target0 are in the range of [0, 1]
@@ -265,12 +136,12 @@ class VGG16PartialLoss(PerceptualLoss):
 
             with torch.no_grad():
                 groundtruth = self.vgg16partial(yc)
-            generated = self.vgg16partial(x)
+                generated = self.vgg16partial(x)
             
             # vgg loss: VGG content loss
             if self.vgg_weight > 0:
                 # for m in range(0, len(generated)):
-                for m in range(len(generated) - self.feat_num, len(generated)):
+                for m in range(self.feat_num):
 
                     gt_data = Variable(groundtruth[m].data, requires_grad=False)
                     vgg_loss += (
@@ -281,11 +152,11 @@ class VGG16PartialLoss(PerceptualLoss):
             # style loss: Gram matrix loss
             if self.style_weight > 0:
                 # for m in range(0, len(generated)):
-                for m in range(len(generated) - self.feat_num, len(generated)):
+                for m in range(self.feat_num):
 
-                    gt_style = gram_matrix(
+                    gt_style = gram(
                         Variable(groundtruth[m].data, requires_grad=False))
-                    gen_style = gram_matrix(generated[m])
+                    gen_style = gram(generated[m])
                     style_loss += (
                         self.style_weight * self.loss_fn(gen_style, gt_style)
                     )

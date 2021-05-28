@@ -33,6 +33,8 @@ class TrainParser():
         parser.add_argument('--mask_list_train', type=str, default='namelist/nv_mask_training.txt', help='')
         parser.add_argument('--mask_list_test', type=str, default='namelist/nv_mask_training.txt', help='')
         parser.add_argument('--save_interval', type=int, default=5, help='')
+        parser.add_argument('--mode', type=str, default="train", help='from scratch or ft')
+        parser.add_argument('--init_weight', type=str, default=None, help='pretrained model')
 
         self.parser = parser
 
@@ -42,7 +44,7 @@ class TestParser():
         parser = argparse.ArgumentParser(description='Inpainting Testing')
         # Frequently used commands
         parser.add_argument('--model', type=str, help='Model type')
-        parser.add_argument('--dataset', type=str, help='Dataset type: unity, ue, ueGB')
+        parser.add_argument('--dataset', type=str, help='')
         parser.add_argument('--checkpoint', type=str, help='model info')
         parser.add_argument('--name', type=str, help='name')
         parser.add_argument('--seq_path', type=str, help='output dir')

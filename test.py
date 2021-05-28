@@ -13,7 +13,7 @@ import torch, argparse, pdb
 from data import CreateDataloader
 from model import CreateModel
 from loss import VGG16PartialLoss
-from metrics import compare_psnr, relMSE, PSNR, SSIM
+from metrics import compare_psnr, l1_loss
 from options import TestParser, set_init, print_options
 
 def load_checkpoint(filename):
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     dataset = CreateDataloader(args, mode='test')
     print(args.checkpoint)
     model, epoch = load_checkpoint(args.checkpoint)
-    rmse_inp_all, psnr_inp_all, ssim_inp_all = 0, 0, 0
+    l1_inp_all, psnr_inp_all, ssim_inp_all = 0, 0, 0
     seq_path = args.seq_path
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -77,17 +77,17 @@ if __name__ == '__main__':
             gt = gt.cpu().numpy()
             
             
-            rmse = relMSE(output, gt)
+            l1 = l1_loss(output, gt)
             psnr = compare_psnr(output, gt, data_range=255.0)
             ssim = compare_ssim(output, gt, data_range=255.0, multichannel=True)
             if i % args.show_ratio == 0:
                 cv2.imwrite('{}/{:05d}_output.png'.format(seq_path, i), output.astype(np.uint8))
                 cv2.imwrite('{}/{:05d}_input.png'.format(seq_path, i), masked_img.astype(np.uint8))
                 cv2.imwrite('{}/{:05d}_gt.png'.format(seq_path, i), gt.astype(np.uint8))
-            rmse_inp_all += rmse
+            l1_inp_all += l1
             psnr_inp_all += psnr
             ssim_inp_all += ssim
-        rmse_inp_all /= i+1
+        l1_inp_all /= i+1
         psnr_inp_all /= i+1
         ssim_inp_all /= i+1
-        print("rmse: {:.4f}, psnr: {:.4f}, ssim: {:.4f}".format(rmse_inp_all, psnr_inp_all, ssim_inp_all))
+        print("l1_loss: {:.4f}, psnr: {:.4f}, ssim: {:.4f}".format(l1_inp_all, psnr_inp_all, ssim_inp_all))
