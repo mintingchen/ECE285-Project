@@ -11,38 +11,34 @@ class Vgg16(nn.Module):
     def __init__(self):
         super(Vgg16, self).__init__()
         features = models.vgg16(pretrained=True).features
-        self.to_relu_1_2 = nn.Sequential()
-        self.to_relu_2_2 = nn.Sequential()
-        self.to_relu_3_3 = nn.Sequential()
-        self.to_relu_4_3 = nn.Sequential()
+        self.pool1 = nn.Sequential()
+        self.pool2 = nn.Sequential()
+        self.pool3 = nn.Sequential()
+        self.pool4 = nn.Sequential()
 
-        for x in range(4):
-            self.to_relu_1_2.add_module(str(x), features[x])
-            self.to_relu_1_2.add_module(str(4), nn.AvgPool2d(kernel_size=2, stride=2))
-        for x in range(4, 9):
-            self.to_relu_2_2.add_module(str(x+1), features[x])
-            self.to_relu_2_2.add_module(str(9), nn.AvgPool2d(kernel_size=2, stride=2))
-        for x in range(9, 16):
-            self.to_relu_3_3.add_module(str(x+2), features[x])
-            self.to_relu_3_3.add_module(str(16), nn.AvgPool2d(kernel_size=2, stride=2))
-        for x in range(16, 23):
-            self.to_relu_4_3.add_module(str(x+3), features[x])
-            self.to_relu_4_3.add_module(str(23), nn.AvgPool2d(kernel_size=2, stride=2))
+        for x in range(5):
+            self.pool1.add_module(str(x), features[x])
+        for x in range(5, 10):
+            self.pool2.add_module(str(x), features[x])
+        for x in range(10, 17):
+            self.pool3.add_module(str(x), features[x])
+        for x in range(17, 24):
+            self.pool4.add_module(str(x), features[x])
 
         # don't need the gradients, just want the features
         for param in self.parameters():
             param.requires_grad = False
 
     def forward(self, x):
-        h = self.to_relu_1_2(x)
-        h_relu_1_2 = h
-        h = self.to_relu_2_2(h)
-        h_relu_2_2 = h
-        h = self.to_relu_3_3(h)
-        h_relu_3_3 = h
-        h = self.to_relu_4_3(h)
-        h_relu_4_3 = h
-        out = (h_relu_1_2, h_relu_2_2, h_relu_3_3, h_relu_4_3)
+        h = self.pool1(x)
+        h_pool1 = h
+        h = self.pool2(h)
+        h_pool2 = h
+        h = self.pool3(h)
+        h_pool3 = h
+        h = self.pool4(h)
+        h_pool4 = h
+        out = (h_pool1, h_pool2, h_pool3, h_pool4)
         return out
 
 
