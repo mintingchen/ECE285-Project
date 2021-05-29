@@ -132,7 +132,7 @@ class VGG16PartialLoss():
 
             with torch.no_grad():
                 groundtruth = self.vgg16partial(yc)
-                generated = self.vgg16partial(x)
+            generated = self.vgg16partial(x)
             
             # vgg loss: VGG content loss
             if self.vgg_weight > 0:
