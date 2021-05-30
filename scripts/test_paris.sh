@@ -1,6 +1,6 @@
 python test.py --model Unet \
             --dataset paris \
-            --checkpoint ./checkpoints/20210528_paris_newPloss2/101.pt \
+            --checkpoint ./checkpoints/20210529_paris_100_ft/50.pt \
             --seq_path ./output/ \
             --image_dir dataset/paris/ \
             --image_list_train namelist/paris_training.txt \

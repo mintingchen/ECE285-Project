@@ -17,7 +17,7 @@ import random
 
 class CifarTrain(Dataset):
 
-    def __init__(self, image_dir,image_list, mask_dir, mask_list):
+    def __init__(self, image_dir,image_list, mask_dir, mask_list, mask_reverse):
         super(CifarTrain, self).__init__()
 
         # cite https://www.cs.toronto.edu/~kriz/cifar.html
@@ -30,6 +30,7 @@ class CifarTrain(Dataset):
         self.images = unpickle(image_dir)['data']
         self.mask_dir = mask_dir
         self.masks = [x.strip() for x in open(mask_list)]
+        self.mask_reverse = mask_reverse
      
 
         
@@ -48,7 +49,10 @@ class CifarTrain(Dataset):
         
         mask = cv2.resize(mask, (img.shape[1], img.shape[0]))
         mask[mask>1] = 1
-        mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
+        if self.mask_reverse == "Yes":
+            mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
+        else:
+            mask = np.expand_dims(mask[:, :], axis=2)
         masked_img = img * mask        
 
         img = torch.from_numpy(img).permute((2, 0, 1))
@@ -66,7 +70,7 @@ class CifarTrain(Dataset):
 
 class CifarTest(Dataset):
 
-    def __init__(self, image_dir, image_list, mask_dir, mask_list):
+    def __init__(self, image_dir, image_list, mask_dir, mask_list, mask_reverse):
         super(CifarTest, self).__init__()
 
         def unpickle(file):
@@ -77,6 +81,7 @@ class CifarTest(Dataset):
         self.images = unpickle(image_dir)['data']
         self.mask_dir = mask_dir
         self.masks = [x.strip() for x in open(mask_list)]
+        self.mask_reverse = mask_reverse
 
     def __getitem__(self, index):
         img = self.images[index]
@@ -86,7 +91,10 @@ class CifarTest(Dataset):
 
         mask = cv2.resize(mask, (img.shape[1], img.shape[0]))
         mask[mask>1] = 1
-        mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
+        if self.mask_reverse == "Yes":
+            mask = np.logical_not(np.expand_dims(mask[:, :], axis=2))
+        else:
+            mask = np.expand_dims(mask[:, :], axis=2)
         masked_img = img * mask
 
         img = torch.from_numpy(img).permute((2, 0, 1))

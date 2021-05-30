@@ -47,10 +47,10 @@ def train(model, criterion, optimizer, dataset, epoch, iter_num):
         optimizer.step()
         
         total_loss += loss.item()
-        total_l1_loss = l1_loss.item()
-        total_vgg_loss = vgg_loss.item()
-        total_style_loss = style_loss.item()
-        total_smooth_loss = smooth_loss.item()
+        total_l1_loss += l1_loss.item()
+        total_vgg_loss += vgg_loss.item()
+        total_style_loss += style_loss.item()
+        total_smooth_loss += smooth_loss.item()
         
         if i%200 == 0:
             print("Iter[{}] Loss => {:.4}".format(i, loss))
@@ -125,7 +125,7 @@ if __name__ == '__main__':
         total_loss, total_l1_loss, total_vgg_loss, total_style_loss, total_smooth_loss, iter_num = train(model, criterion, optimizer, trainset, epoch, iter_num)
         scheduler.step(total_loss)
         
-        print("Epoch[{}] ====> Loss: {:.4}, lr: {:.4}".format(epoch+1, total_loss, optimizer.param_groups[0]['lr']))
+        print("Epoch[{}] ====> Loss: {:.4} L1 => {:.4} Percep => {:.4} Style => {:.4} Smooth => {:.4}, lr: {:.4}".format(epoch+1, total_loss, total_l1_loss, total_vgg_loss, total_style_loss, total_smooth_loss, optimizer.param_groups[0]['lr']))
         
         loss_names = ["total_loss", "total_l1_loss", "total_vgg_loss", "total_style_loss", "total_smooth_loss"]
         loss_values = [total_loss, total_l1_loss, total_vgg_loss, total_style_loss, total_smooth_loss]
@@ -138,4 +138,3 @@ if __name__ == '__main__':
                 'state_dict':model.state_dict(),
                 'optimizer':optimizer.state_dict(),
                 }, '%s/%s/%s.pt' % (args.save_dir, args.name, epoch+1))
-    loss_file.close()

@@ -35,6 +35,7 @@ class TrainParser():
         parser.add_argument('--save_interval', type=int, default=5, help='')
         parser.add_argument('--mode', type=str, default="train", help='from scratch or ft')
         parser.add_argument('--init_weight', type=str, default=None, help='pretrained model')
+        parser.add_argument('--mask_reverse', type=str, default="Yes", help='whether reverse mask')
 
         self.parser = parser
 
@@ -55,6 +56,8 @@ class TestParser():
         parser.add_argument('--mask_list_train', type=str, default='namelist/nv_mask_training.txt', help='')
         parser.add_argument('--mask_list_test', type=str, default='namelist/nv_mask_training.txt', help='')
         parser.add_argument('--show_ratio', type=int, default=10, help='')
+        parser.add_argument('--mode', type=str, default="train", help='from scratch or ft')
+        parser.add_argument('--mask_reverse', type=str, default="Yes", help='whether reverse mask')
         self.parser = parser
 
 def print_options(args):

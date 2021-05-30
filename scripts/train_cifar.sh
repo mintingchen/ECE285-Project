@@ -1,8 +1,8 @@
 NAME=$1
 python train.py --model Unet_light \
             --dataset cifar \
-            --epochs 500 \
-            --batch_size 64 \
+            --epochs 100 \
+            --batch_size 16 \
             --lr 0.0001 \
             --save_dir ./checkpoints/ \
             --name $NAME \
