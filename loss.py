@@ -65,7 +65,7 @@ class VGG16PartialLoss():
     """
     VGG16 perceptual loss
     """
-    def __init__(self, device, l1_alpha=6.0, perceptual_alpha=0.05, style_alpha=240,
+    def __init__(self, device, l1_alpha=6.0, perceptual_alpha=0.05, style_alpha=120,
                  smooth_alpha=0.1, feat_num=3, vgg_path='~/.torch/vgg16-397923af.pth'):
         """
         Init
@@ -91,30 +91,30 @@ class VGG16PartialLoss():
         self.dividor = 1
         self.feat_num = feat_num
 
-    @staticmethod
-    def normalize_batch(batch, div_factor=255.):
-        """
-        Normalize batch
-        :param batch: input tensor with shape
-         (batch_size, nbr_channels, height, width)
-        :param div_factor: normalizing factor before data whitening
-        :return: normalized data, tensor with shape
-         (batch_size, nbr_channels, height, width)
-        """
-        # normalize using imagenet mean and std
-        mean = batch.data.new(batch.data.size())
-        std = batch.data.new(batch.data.size())
-        mean[:, 0, :, :] = 0.485
-        mean[:, 1, :, :] = 0.456
-        mean[:, 2, :, :] = 0.406
-        std[:, 0, :, :] = 0.229
-        std[:, 1, :, :] = 0.224
-        std[:, 2, :, :] = 0.225
-        batch = torch.div(batch, div_factor)
+#     @staticmethod
+#     def normalize_batch(batch, div_factor=255.):
+#         """
+#         Normalize batch
+#         :param batch: input tensor with shape
+#          (batch_size, nbr_channels, height, width)
+#         :param div_factor: normalizing factor before data whitening
+#         :return: normalized data, tensor with shape
+#          (batch_size, nbr_channels, height, width)
+#         """
+#         # normalize using imagenet mean and std
+#         mean = batch.data.new(batch.data.size())
+#         std = batch.data.new(batch.data.size())
+#         mean[:, 0, :, :] = 0.485
+#         mean[:, 1, :, :] = 0.456
+#         mean[:, 2, :, :] = 0.406
+#         std[:, 0, :, :] = 0.229
+#         std[:, 1, :, :] = 0.224
+#         std[:, 2, :, :] = 0.225
+#         batch = torch.div(batch, div_factor)
 
-        batch -= Variable(mean)
-        batch = torch.div(batch, Variable(std))
-        return batch
+#         batch -= Variable(mean)
+#         batch = torch.div(batch, Variable(std))
+#         return batch
 
     def __call__(self, output0, target0, mask):
         """
@@ -126,8 +126,25 @@ class VGG16PartialLoss():
          (batch_size, nbr_channels, height, width)
         :return: total perceptual loss
         """
-        y = self.normalize_batch(target0, self.dividor)
-        x = self.normalize_batch(output0, self.dividor)
+#         y = self.normalize_batch(target0, self.dividor)
+#         x = self.normalize_batch(output0, self.dividor)
+#         comp = self.normalize_batch(output0*mask+target0*(1-mask), self.dividor)
+        
+        y = target0
+        x = output0
+        comp = output0*(1-mask)+target0*mask
+        
+#         import cv2
+#         y = y[0].permute((1, 2, 0))
+#         y = y.detach().cpu().numpy()*255.0
+#         cv2.imwrite("target.png", y)
+#         x = x[0].permute((1, 2, 0))
+#         x = x.detach().cpu().numpy()*255.0
+#         cv2.imwrite("output.png", x)
+#         comp = comp[0].permute((1, 2, 0))
+#         comp = comp.detach().cpu().numpy()*255.0
+#         cv2.imwrite("comp.png", comp)
+#         assert(0)
 
         # L1 loss
         l1_loss = self.l1_weight * (torch.abs((1-mask)*x - (1-mask)*y).mean()) + (torch.abs(mask*x - mask*y).mean())
@@ -142,7 +159,8 @@ class VGG16PartialLoss():
 
             with torch.no_grad():
                 groundtruth = self.vgg16partial(yc)
-                generated = self.vgg16partial(x)
+                generated_x = self.vgg16partial(x)
+                generated_comp = self.vgg16partial(comp)
             
             # vgg loss: VGG content loss
             if self.vgg_weight > 0:
@@ -151,7 +169,7 @@ class VGG16PartialLoss():
 
                     gt_data = Variable(groundtruth[m].data, requires_grad=False)
                     vgg_loss += (
-                        self.vgg_weight * self.loss_fn(generated[m], gt_data)
+                        self.vgg_weight * (self.loss_fn(generated_x[m], gt_data)+self.loss_fn(generated_comp[m], gt_data))
                     )
 
             
@@ -162,16 +180,17 @@ class VGG16PartialLoss():
 
                     gt_style = gram(
                         Variable(groundtruth[m].data, requires_grad=False))
-                    gen_style = gram(generated[m])
+                    gen_x_style = gram(generated_x[m])
+                    gen_comp_style = gram(generated_comp[m])
                     style_loss += (
-                        self.style_weight * self.loss_fn(gen_style, gt_style)
+                        self.style_weight * (self.loss_fn(gen_x_style, gt_style)+self.loss_fn(gen_comp_style, gt_style))
                     )
 
         # smooth term
         if self.regularize_weight != 0:
             smooth_loss += self.regularize_weight * (
-                torch.abs(x[:, :, :, :-1] - x[:, :, :, 1:]).mean() +
-                torch.abs(x[:, :, :-1, :] - x[:, :, 1:, :]).mean()
+                torch.abs(comp[:, :, :, :-1] - comp[:, :, :, 1:]).mean() +
+                torch.abs(comp[:, :, :-1, :] - comp[:, :, 1:, :]).mean()
             )
 
         tot = l1_loss + vgg_loss + style_loss + smooth_loss
