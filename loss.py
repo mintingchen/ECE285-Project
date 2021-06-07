@@ -5,7 +5,7 @@ from torch.autograd import Variable
 from torchvision import models
 
 import os
-os.environ['TORCH_HOME']='/home/xiwei/ece285/ECE285-Project'
+os.environ['TORCH_HOME']='/home/mic007/285/ECE285-Project'
 
 import torch
 import torch.nn as nn
@@ -51,11 +51,13 @@ class Vgg16(nn.Module):
         out = (h_pool1, h_pool2, h_pool3, h_pool4)
         return out
 
-
+    
+    
 def gram(x):
     (bs, ch, h, w) = x.size()
     f = x.view(bs, ch, w * h)
     f_T = f.transpose(1, 2)
+    
     G = f.bmm(f_T) / (ch * h * w)
     return G
 
