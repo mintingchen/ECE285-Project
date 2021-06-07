@@ -42,7 +42,7 @@ def train(model, criterion, optimizer, dataset, epoch, iter_num):
 
         output, _ = model(image, mask)
         
-        loss, l1_loss, vgg_loss, style_loss, smooth_loss = criterion(output, image)
+        loss, l1_loss, vgg_loss, style_loss, smooth_loss = criterion(output, image, mask)
         loss.backward()
         optimizer.step()
         
@@ -113,17 +113,17 @@ if __name__ == '__main__':
             lr=args.lr,
             weight_decay=args.weight_decay,
         )
-    scheduler = ReduceLROnPlateau(
-            optimizer, 'min', patience=3,
-            min_lr=1e-10, verbose=True
-        )
+#     scheduler = ReduceLROnPlateau(
+#             optimizer, 'min', patience=3,
+#             min_lr=1e-10, verbose=True
+#         )
     
     iter_num = 0
     for epoch in range(args.epochs):
         print('\nEpoch %s' % (epoch+1))
 
         total_loss, total_l1_loss, total_vgg_loss, total_style_loss, total_smooth_loss, iter_num = train(model, criterion, optimizer, trainset, epoch, iter_num)
-        scheduler.step(total_loss)
+#         scheduler.step(total_loss)
         
         print("Epoch[{}] ====> Loss: {:.4} L1 => {:.4} Percep => {:.4} Style => {:.4} Smooth => {:.4}, lr: {:.4}".format(epoch+1, total_loss, total_l1_loss, total_vgg_loss, total_style_loss, total_smooth_loss, optimizer.param_groups[0]['lr']))
         
