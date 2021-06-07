@@ -7,6 +7,16 @@ from torchvision import models
 import os
 os.environ['TORCH_HOME']='/home/xiwei/ece285/ECE285-Project'
 
+import torch
+import torch.nn as nn
+
+from torch.autograd import Variable
+from torchvision import models
+
+import os
+os.environ['TORCH_HOME']='/home/xiwei/ece285/ECE285-Project'
+
+
 class Vgg16(nn.Module):
     def __init__(self):
         super(Vgg16, self).__init__()
@@ -55,7 +65,7 @@ class VGG16PartialLoss():
     """
     VGG16 perceptual loss
     """
-    def __init__(self, device, l1_alpha=5.0, perceptual_alpha=0.05, style_alpha=120,
+    def __init__(self, device, l1_alpha=6.0, perceptual_alpha=0.05, style_alpha=240,
                  smooth_alpha=0.1, feat_num=3, vgg_path='~/.torch/vgg16-397923af.pth'):
         """
         Init
@@ -106,7 +116,7 @@ class VGG16PartialLoss():
         batch = torch.div(batch, Variable(std))
         return batch
 
-    def __call__(self, output0, target0):
+    def __call__(self, output0, target0, mask):
         """
         Forward
         assuming both output0 and target0 are in the range of [0, 1]
@@ -120,7 +130,7 @@ class VGG16PartialLoss():
         x = self.normalize_batch(output0, self.dividor)
 
         # L1 loss
-        l1_loss = self.l1_weight * (torch.abs(x - y).mean())
+        l1_loss = self.l1_weight * (torch.abs((1-mask)*x - (1-mask)*y).mean()) + (torch.abs(mask*x - mask*y).mean())
         vgg_loss = 0
         style_loss = 0
         smooth_loss = 0
