@@ -70,7 +70,6 @@ class ParisTest(Dataset):
     def __init__(self, image_dir, image_list, mask_dir, mask_list, mask_reverse):
         super(ParisTest, self).__init__()
 
-        print(mask_list)
         self.image_dir = image_dir
         self.images = [x.strip() for x in open(image_list)]
         self.mask_dir = mask_dir
@@ -81,7 +80,6 @@ class ParisTest(Dataset):
 
     def __getitem__(self, index):
         img = cv2.imread(self.image_dir+self.images[index])
-        print(self.mask_dir+self.masks[index%len(self.masks)])
         mask = cv2.imread(self.mask_dir+self.masks[index%len(self.masks)], cv2.IMREAD_GRAYSCALE)
 
         # The coordinate of the top-left corner for the croping patch 

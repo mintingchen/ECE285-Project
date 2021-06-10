@@ -30,6 +30,7 @@ class Block(nn.Module):
 
         if self.encoding:
             self.l1 = PartialConv2d(in_channels, out_channels, kernel_s, strides, padding=kernel_s//2)
+#             self.l1 = nn.Conv2d(in_channels, out_channels, kernel_s, strides, padding=kernel_s//2)
             if self.batchnorm:
                 self.l2 = nn.Sequential(
                     nn.BatchNorm2d(out_channels),
@@ -41,6 +42,7 @@ class Block(nn.Module):
         elif self.decoding:
             self.l1 = nn.Upsample(scale_factor=2, mode='nearest')
             self.l2 = PartialConv2d(in_channels, out_channels, kernel_s, strides, padding=kernel_s//2, mask_channels=2)
+#             self.l2 = nn.Conv2d(in_channels, out_channels, kernel_s, strides, padding=kernel_s//2)
         
             if self.batchnorm:
                 self.l3 = nn.Sequential(
@@ -53,8 +55,11 @@ class Block(nn.Module):
     def forward(self, img, mask, concat_img=0, concat_mask=0):
         if self.encoding:
             pconv_o, mask_o = self.l1(img, mask)
+#             pconv_o = self.l1(img)
             pconv_o = self.l2(pconv_o)
             return pconv_o, mask_o
+#             return pconv_o, pconv_o
+
 
         if self.decoding:
             upimg_o = self.l1(img)
@@ -62,9 +67,11 @@ class Block(nn.Module):
             concated_img = torch.cat((upimg_o, concat_img), 1)
             concated_mask = torch.cat((upmask_o, concat_mask), 1)
             pconv_o, mask_o = self.l2(concated_img, concated_mask)
+#             pconv_o = self.l2(concated_img)
             if self.batchnorm:
                 pconv_o = self.l3(pconv_o)
             return pconv_o, mask_o
+#             return pconv_o, pconv_o
             
 
 class Unet(nn.Module):

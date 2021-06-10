@@ -5,7 +5,7 @@ python train.py --model Unet \
             --batch_size 8 \
             --save_dir ./checkpoints/ \
             --mode ft \
-            --init_weight ./checkpoints/20210529_paris/100.pt \
+            --init_weight ./checkpoints/20210609_paris_no_decay_1e4_conv/200.pt \
             --name $NAME \
             --lr 0.00001 \
             --save_interval 10 \

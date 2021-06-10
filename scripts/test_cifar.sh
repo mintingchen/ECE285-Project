@@ -1,7 +1,6 @@
 python test.py --model Unet_light \
             --dataset cifar \
-            --checkpoint ./checkpoints/test/100.pt \
-            --name "model_name" \
+            --checkpoint ./checkpoints/20210606_paris_no_decay_1e4_200_ft/50.pt \
             --seq_path ./output/ \
             --image_dir dataset/cifar/test \
             --image_list_train namelist/paris_training.txt \
@@ -9,4 +8,4 @@ python test.py --model Unet_light \
             --mask_dir dataset/mask/testing_mask_dataset/ \
             --mask_list_train namelist/nv_mask_training.txt \
             --mask_list_test namelist/nv_mask_training.txt \
-            --show_ratio 100
+            --show_ratio 500

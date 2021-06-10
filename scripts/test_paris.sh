@@ -1,6 +1,6 @@
 python test.py --model Unet \
             --dataset paris \
-            --checkpoint ./checkpoints/20210529_paris_100_ft/50.pt \
+            --checkpoint ./checkpoints/20210609_paris_no_decay_1e4_conv_200_ft/50.pt \
             --seq_path ./output/ \
             --image_dir dataset/paris/ \
             --image_list_train namelist/paris_training.txt \
@@ -8,4 +8,4 @@ python test.py --model Unet \
             --mask_dir dataset/mask/testing_mask_dataset/ \
             --mask_list_train namelist/nv_mask_training.txt \
             --mask_list_test namelist/nv_mask_testing.txt \
-            --show_ratio 10
+            --show_ratio 5

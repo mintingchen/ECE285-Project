@@ -41,6 +41,7 @@ def train(model, criterion, optimizer, dataset, epoch, iter_num):
         mask = data['mask'].to(device)
 
         output, _ = model(image, mask)
+#         output, _ = model(masked_img, mask)
         
         loss, l1_loss, vgg_loss, style_loss, smooth_loss = criterion(output, image, mask)
         loss.backward()

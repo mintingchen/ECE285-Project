@@ -7,15 +7,6 @@ from torchvision import models
 import os
 os.environ['TORCH_HOME']='/home/xiwei/ece285/ECE285-Project'
 
-import torch
-import torch.nn as nn
-
-from torch.autograd import Variable
-from torchvision import models
-
-import os
-os.environ['TORCH_HOME']='/home/xiwei/ece285/ECE285-Project'
-
 
 class Vgg16(nn.Module):
     def __init__(self):
@@ -195,3 +186,4 @@ class VGG16PartialLoss():
 
         tot = l1_loss + vgg_loss + style_loss + smooth_loss
         return tot, l1_loss, vgg_loss, style_loss, smooth_loss
+#         return tot, l1_loss, vgg_loss, style_loss, l1_loss
