@@ -9,8 +9,8 @@ from math import exp
 from sklearn.metrics import mean_squared_error
 
 def l1_loss(img1, img2, data_range=255.0):
-    img1 = img1 / data_range
-    img2 = img2 / data_range
+#     img1 = img1 / data_range
+#     img2 = img2 / data_range
     err = abs(img1.astype("float") - img2.astype("float")).mean()
     
     return err
